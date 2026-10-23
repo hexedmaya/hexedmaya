@@ -1,0 +1,34 @@
+name: Refresh README cards
+
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Bump cache-bust param so GitHub's image proxy refetches
+        run: |
+          ts=$(date +%s)
+          sed -i -E "s#(cards/[a-z]+\.svg\?v=)[0-9]+#\1${ts}#g" README.md
+
+      - name: Amend the single commit and force-push (keeps history to one commit)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+            exit 0
+          fi
+          git commit --amend --no-edit
+          git push --force origin HEAD:main
